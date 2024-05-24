@@ -1,9 +1,8 @@
+import logging
+import os
 import praw
-#from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
-import time
 import numpy as np
-from datetime import datetime
-
+from datetime import datetime, timedelta
 
 reddit = praw.Reddit(
     client_id="ghj5rFGtFyJbzXYjZNOr8g",
@@ -12,7 +11,6 @@ reddit = praw.Reddit(
     user_agent="ios:com.example.myredditapp:v1.2.3 (by u/SouthernFishing8475)",
     username="SouthernFishing8475",
 )
-hyped_stocks = {}
 
 def is_stock_name(text):
     if text[0] == '$':
@@ -29,6 +27,27 @@ def contains_stock_name(text):
 
 
 if __name__ == '__main__':
+    hyped_stocks = {}
+
+    # Get the current time
+    current_time = datetime.now()
+
+    # Add 2 hours
+    new_time = current_time + timedelta(hours=2)
+
+    # Format the new time as DD-MM_HH-MM
+    formatted_time = new_time.strftime('%d-%m_%H-%M')
+
+
+    logger = logging.getLogger(__name__)
+    logging.basicConfig(level=logging.INFO,
+                        format='%(message)s',
+                        handlers=[
+                            logging.FileHandler(f'logs/{formatted_time}.log'),
+                            logging.StreamHandler()
+                        ])
+
+    logger.info(f"Starting script at {formatted_time}")
     # Stores all posts and comments that mention a stock
     mentioning_posts = []
 
@@ -36,7 +55,7 @@ if __name__ == '__main__':
                   'Superstonks']
 
     for sr in subreddits:
-        day_time = str(datetime.now().day) + "-" + str(datetime.now().hour)
+        logger.info(20*'-' + '\n' + f"Checking subreddit: {sr}")
         # Go through posts and comments in the subreddit
         for submission in reddit.subreddit(sr).top('day'):
             if contains_stock_name(submission.title):
@@ -45,11 +64,12 @@ if __name__ == '__main__':
             for comment in submission.comments.list():
                 if contains_stock_name(comment.body) and "I am a bot" not in comment.body:
                     mentioning_posts.append(comment.body)
-        # Sleep because of API rate limits
-        np.save(f"data/{sr}_{day_time}_data.npy", hyped_stocks)
-        hyped_stocks = {}
-        time.sleep(0)
+        logger.info(f"Saving data for {sr} \n" + 20*"-")
+        np.save(f"data/{sr}_{formatted_time}_data.npy", hyped_stocks)
 
+        hyped_stocks = {}
+
+    logger.info(f"Finished script!")
 
 
 
